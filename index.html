@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Pulse Tracker</title>
+    <style>
+        :root { 
+            --bg: #000d00; /* Darker Deep Green */
+            --card: #001a00; 
+            --accent: #00f2ff; /* Vibrant Neon Blue */
+            --text: #ffffff; 
+            --muted: #4d8c8c; 
+        }
+        
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 480px; }
+        
+        .card { 
+            background: var(--card); 
+            padding: 25px; 
+            border-radius: 16px; 
+            border: 1px solid #003300; 
+            margin-bottom: 20px; 
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1); /* Subtle Glow */
+        }
+        h1, h2 { margin: 0 0 10px 0; font-weight: 700; }
+        
+        .quote-box { 
+            font-style: italic; 
+            color: var(--accent); 
+            border-left: 3px solid var(--accent); 
+            padding-left: 15px; 
+            margin-bottom: 20px; 
+            font-size: 1.1rem; 
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.5); 
+        }
+
+        input { 
+            width: 100%; background: #000; border: 1px solid #004400; color: #fff; 
+            padding: 14px; border-radius: 10px; margin: 8px 0 18px 0; box-sizing: border-box; font-size: 1rem; outline: none;
+            transition: 0.3s;
+        }
+        input:focus { 
+            border-color: var(--accent); 
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.4); 
+        }
+        input:disabled { border-color: transparent; background: transparent; color: var(--muted); padding-left: 0; }
+
+        .btn { 
+            background: var(--accent); 
+            color: #000; 
+            border: none; 
+            padding: 18px; 
+            width: 100%; 
+            border-radius: 12px; 
+            font-weight: 900; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-size: 1.1rem; 
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+        .btn:hover { 
+            filter: brightness(1.2); 
+            box-shadow: 0 0 25px rgba(0, 242, 255, 0.6); 
+        }
+        .btn:disabled { background: #003333; color: #005555; cursor: not-allowed; box-shadow: none; }
+
+        .modal { 
+            position: fixed; inset: 0; background: rgba(0, 5, 0, 0.98); 
+            display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 1000;
+        }
+        .scale-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 25px; }
+        .scale-btn { 
+            background: var(--accent); 
+            color: #000; 
+            border: none; 
+            padding: 18px; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+
+        .rest-box { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #003300; }
+        .hidden { display: none; }
+        .today-tag { 
+            color: var(--accent); 
+            font-size: 0.75rem; 
+            letter-spacing: 2px; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+            display: block; 
+            font-weight: bold; 
+            text-shadow: 0 0 5px rgba(0, 242, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quoteArea" class="quote-box"></div>
+
+    <div id="setupView" class="card hidden">
+        <h1 style="color: var(--accent)">Workout Setup</h1>
+        <p style="color: var(--muted)">Name your days and exercises.</p>
+        <div id="setupFields"></div>
+        <button class="btn" onclick="saveSetup()">Lock & Train</button>
+    </div>
+
+    <div id="mainView" class="hidden">
+        <div class="card" style="text-align: center; border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
+            <p style="margin:0; letter-spacing: 2px; font-weight: bold; color: var(--accent);">CURRENT STREAK</p>
+            <h1 id="streakDisplay" style="font-size: 4.5rem; margin: 5px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.4);">0</h1>
+            <h2 id="currentDayLabel" style="color: #fff; font-size: 1.2rem; text-transform: uppercase;"></h2>
+        </div>
+
+        <div id="workoutDisplay"></div>
+
+        <button id="completeBtn" class="btn" onclick="markComplete()">Day Complete</button>
+
+        <div id="restView" class="card hidden" style="margin-top: 25px;">
+            <h2 style="color: var(--accent)">Weekly Schedule</h2>
+            <p style="color: var(--muted)">Mon-Thu: Training | Fri-Sun: Rest</p>
+            <div id="restList"></div>
+        </div>
+    </div>
+</div>
+
+<div id="scaleModal" class="modal hidden">
+    <h2 style="color: var(--accent); text-shadow: 0 0 10px var(--accent);">Intensity Check</h2>
+    <p>How was today's session? (1-5)</p>
+    <div class="scale-grid">
+        <button class="scale-btn" onclick="handleScale(1)">1</button>
+        <button class="scale-btn" onclick="handleScale(2)">2</button>
+        <button class="scale-btn" onclick="handleScale(3)">3</button>
+        <button class="scale-btn" onclick="handleScale(4)">4</button>
+        <button class="scale-btn" onclick="handleScale(5)">5</button>
+    </div>
+</div>
+
+<script>
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const quotes = [
+        "Suffer the pain of discipline or suffer the pain of regret.",
+        "Motivation gets you started. Habit keeps you going.",
+        "The only bad workout is the one that didn't happen.",
+        "Consistency beats talent every time.",
+        "Action is the foundational key to all success."
+    ];
+
+    let state = JSON.parse(localStorage.getItem('neonPulseFitState')) || {
+        mode: 'setup',
+        streak: 0,
+        days: [
+            { name: "Day 1 (Mon)", exercise: "Workout Details..." },
+            { name: "Day 2 (Tue)", exercise: "Workout Details..." },
+            { name: "Day 3 (Wed)", exercise: "Workout Details..." },
+            { name: "Day 4 (Thu)", exercise: "Workout Details..." }
+        ],
+        restSchedule: [true, false, false, false, false, true, true],
+        lastCompleted: null,
+        easyCounter: 0 
+    };
+
+    function requestNotification() {
+        if ("Notification" in window) Notification.requestPermission();
+    }
+
+    function sendNotify(title, body) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body: body });
+        }
+    }
+
+    function init() {
+        requestNotification();
+        document.getElementById('quoteArea').innerText = `"${quotes[Math.floor(Math.random() * quotes.length)]}"`;
+
+        if (state.mode === 'setup') {
+            document.getElementById('setupView').classList.remove('hidden');
+            document.getElementById('mainView').classList.add('hidden');
+            renderSetup();
+        } else {
+            document.getElementById('setupView').classList.add('hidden');
+            document.getElementById('mainView').classList.remove('hidden');
+            renderMain();
+        }
+    }
+
+    function renderSetup() {
+        const fields = document.getElementById('setupFields');
+        fields.innerHTML = '';
+        state.days.forEach((day, i) => {
+            fields.innerHTML += `
+                <div style="margin-bottom:20px">
+                    <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">WORKOUT ${i+1}</label>
+                    <input type="text" id="name${i}" value="${day.name}">
+                    <input type="text" id="ex${i}" value="${day.exercise}">
+                </div>`;
+        });
+    }
+
+    function saveSetup() {
+        for(let i=0; i<4; i++) {
+            state.days[i].name = document.getElementById(`name${i}`).value || `Day ${i+1}`;
+            state.days[i].exercise = document.getElementById(`ex${i}`).value || "Focus on recovery.";
+        }
+        state.mode = 'train';
+        state.easyCounter = 0; 
+        save();
+    }
+
+    function renderMain() {
+        const now = new Date();
+        const dayIdx = now.getDay(); 
+        document.getElementById('streakDisplay').innerText = state.streak;
+        document.getElementById('currentDayLabel').innerText = dayNames[dayIdx];
+
+        const display = document.getElementById('workoutDisplay');
+        display.innerHTML = '';
+
+        let activeIdx = 0;
+        for (let i = 0; i < dayIdx; i++) {
+            if (!state.restSchedule[i]) activeIdx++;
+        }
+
+        if (state.restSchedule[dayIdx]) {
+            display.innerHTML = `<div class="card" style="opacity: 0.5; border: 1px dashed var(--accent);">
+                <span class="today-tag">Mindset</span><h2>Rest Day</h2><p>Recovery is part of the process.</p></div>`;
+            document.getElementById('completeBtn').classList.add('hidden');
+        } else {
+            const workout = state.days[activeIdx % 4];
+            display.innerHTML = `<div class="card">
+                <span class="today-tag">Active Mission</span><h2 style="color:var(--accent)">${workout.name}</h2><p>${workout.exercise}</p></div>`;
+            document.getElementById('completeBtn').classList.remove('hidden');
+        }
+
+        if (state.lastCompleted === now.toDateString()) {
+            document.getElementById('completeBtn').disabled = true;
+            document.getElementById('completeBtn').innerText = "Session Logged";
+            document.getElementById('restView').classList.remove('hidden');
+            renderRest();
+        }
+    }
+
+    function renderRest() {
+        const list = document.getElementById('restList');
+        list.innerHTML = '';
+        dayNames.forEach((name, i) => {
+            list.innerHTML += `<div class="rest-box">
+                <input type="checkbox" ${state.restSchedule[i] ? 'checked' : ''} onchange="toggleRest(${i})">
+                <span>${name}</span></div>`;
+        });
+    }
+
+    function toggleRest(i) { state.restSchedule[i] = !state.restSchedule[i]; save(); }
+
+    function markComplete() {
+        state.streak++;
+        state.lastCompleted = new Date().toDateString();
+        
+        sendNotify("Workout Complete! ⚡", `You are on a ${state.streak} day streak.`);
+
+        if (state.streak > 0 && state.streak % 4 === 0) {
+            document.getElementById('scaleModal').classList.remove('hidden');
+        } else {
+            save();
+        }
+    }
+
+    function handleScale(num) {
+        document.getElementById('scaleModal').classList.add('hidden');
+        if (num === 1) {
+            state.easyCounter++;
+            if (state.easyCounter >= 2) {
+                state.mode = 'setup';
+                alert("Second 'Easy' block in a row. Editor Unlocked!");
+            } else {
+                alert("Intensity: Easy. Hit Easy again in 4 days to unlock editing.");
+            }
+        } else {
+            state.easyCounter = 0; 
+        }
+        save();
+    }
+
+    function save() {
+        localStorage.setItem('neonPulseFitState', JSON.stringify(state));
+        init();
+    }
+
+    init();
+</script>
+</body>
+</html>
